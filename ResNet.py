@@ -107,9 +107,10 @@ class ResNet:
             relu = tf.nn.relu(batch_norm)
             conv = self.conv_layer(relu,3,filters,name='conv_2')
             return shortcut + conv
-    def _build_bottleneck(self,bottom,filters,scope,is_shutcut_pooling=False):
+    def _build_bottleneck(self,bottom,filters,scope,is_project_shutcut=True,is_shutcut_pooling=False):
         with tf.variable_scope(scope):
-            shortcut = self.project_shortcut(bottom,filters*4,is_shutcut_pooling)
+            output_filters=filters*4 if is_project_shutcut else filters
+            shortcut = self.project_shortcut(bottom,output_filters,is_shutcut_pooling)
             strides = 2 if is_shutcut_pooling else 1
             batch_norm = self.batch_norm(bottom)
             relu = tf.nn.relu(batch_norm)
@@ -119,7 +120,7 @@ class ResNet:
             conv = self.conv_layer(relu,3,filters,strides=strides,name='conv_2')
             batch_norm = self.batch_norm(conv)
             relu = tf.nn.relu(batch_norm)
-            conv = self.conv_layer(relu,1,filters*4,name='conv_3')
+            conv = self.conv_layer(relu,1,output_filters,name='conv_3')
             return conv+shortcut
     def stack_block(self, bottom, filters, scope,  num_blocks, use_project_shortcut):
         input = bottom
@@ -127,11 +128,11 @@ class ResNet:
         for i in range(1, num_blocks):
             input = self._build_block(input, filters, scope+str(i+1), False)
         return input
-    def stack_bottleneck(self, bottom, filters, scope,  num_blocks,is_shutcut_pooling=True):
+    def stack_bottleneck(self, bottom, filters, scope, num_blocks,is_shutcut_pooling=True):
         input = bottom
-        input = self._build_bottleneck(input, filters, scope+str(1),is_shutcut_pooling)
+        input = self._build_bottleneck(input, filters, scope+str(1),True,is_shutcut_pooling)
         for i in range(1, num_blocks):
-            input = self._build_bottleneck(input, filters, scope+str(i+1),False)
+            input = self._build_bottleneck(input, filters, scope+str(i+1),False, False)
         return input
     def _build_graph(self):
         self.init_conv = self.conv_layer(self.images,
