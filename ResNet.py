@@ -14,7 +14,7 @@ class ResNet:
             dataprovider_test:class dataprovier, if not None test it every epoch during train process
                                         and  default be used  in test() function
             init_learning_rate:the learning_rate when train process start
-            epoch:epoch
+            epochs:epochs
             init_conv_param:dict, the parameters of init_conv  inside
             init_pool_param:dict, the parameters of init_pool  inside
             block_list:list,the times of every filters(the filters parameter of conv2d in tf) to be use,the first block use the
@@ -89,8 +89,9 @@ class ResNet:
     def batch_norm(self,bottom):
         return tf.layers.batch_normalization(bottom,axis=3 if self.data_format=='channels_last' else 1,
                     training = self.is_training)
-    def project_shortcut(self, bottom,filters):
-        return self.conv_layer(bottom, 1, filters, 2, name="project")
+    def project_shortcut(self, bottom, filters, is_shutcut_pooling=True):
+        strides = 2 if is_shutcut_pooling else 1
+        return self.conv_layer(bottom, 1, filters, strides, name="project")
     def _build_block(self, bottom, filters, scope, use_project_shortcut=False):
         with tf.variable_scope(scope):
             if(use_project_shortcut==True):
@@ -106,14 +107,10 @@ class ResNet:
             relu = tf.nn.relu(batch_norm)
             conv = self.conv_layer(relu,3,filters,name='conv_2')
             return shortcut + conv
-    def _build_bottleneck(self,bottom,filters,scope, use_project_shortcut=False):
+    def _build_bottleneck(self,bottom,filters,scope,is_shutcut_pooling=False):
         with tf.variable_scope(scope):
-            if(use_project_shortcut==True):
-                shortcut = self.project_shortcut(bottom,filters*4)
-                strides = 2
-            else:
-                shortcut = bottom
-                strides = 1
+            shortcut = self.project_shortcut(bottom,filters*4,is_shutcut_pooling)
+            strides = 2 if is_shutcut_pooling else 1
             batch_norm = self.batch_norm(bottom)
             relu = tf.nn.relu(batch_norm)
             conv = self.conv_layer(relu,1,filters,name='conv_1')
@@ -124,15 +121,17 @@ class ResNet:
             relu = tf.nn.relu(batch_norm)
             conv = self.conv_layer(relu,1,filters*4,name='conv_3')
             return conv+shortcut
-    def stack_same_block(self, block_fn, bottom, filters, scope,  num_blocks, use_project_shortcut):
+    def stack_block(self, bottom, filters, scope,  num_blocks, use_project_shortcut):
         input = bottom
-        if use_project_shortcut:
-            input = block_fn(input, filters, scope+str(1), True)
-        else:
-            input = block_fn(input, filters, scope+str(1), False)
-
+        input = self._build_block(input, filters, scope+str(1), use_project_shortcut)
         for i in range(1, num_blocks):
-            input = block_fn(input, filters, scope+str(i+1), False)
+            input = self._build_block(input, filters, scope+str(i+1), False)
+        return input
+    def stack_bottleneck(self, bottom, filters, scope,  num_blocks,is_shutcut_pooling=True):
+        input = bottom
+        input = self._build_bottleneck(input, filters, scope+str(1),is_shutcut_pooling)
+        for i in range(1, num_blocks):
+            input = self._build_bottleneck(input, filters, scope+str(i+1),False)
         return input
     def _build_graph(self):
         self.init_conv = self.conv_layer(self.images,
@@ -144,15 +143,15 @@ class ResNet:
                                        self.init_pool_param['strides'])
 
         if self.is_bottleneck:
-            block_fn = self._build_bottleneck
-            residual_block = self.stack_same_block(block_fn,self.init_pool, self.filters[0] ,'residual_blcok_1',self.blocks_list[0], True)
-
+            stack_block_fn = self.stack_bottleneck
+            residual_block = stack_block_fn(self.init_pool, self.filters[0] ,'residual_blcok_1',self.blocks_list[0], False)
+            for i in range(1, len(self.blocks_list)):
+                residual_block = stack_block_fn(residual_block, self.filters[i] ,'residual_block_'+str(i+1),self.blocks_list[i], True)
         else:
-            block_fn = self._build_block
-            residual_block = self.stack_same_block(block_fn,self.init_pool, self.filters[0] ,'residual_blcok_1',self.blocks_list[0], False)
-
-        for i in range(1, len(self.blocks_list)):
-            residual_block = self.stack_same_block(block_fn,residual_block, self.filters[i] ,'residual_block_'+str(i+1),self.blocks_list[i], True)
+            stack_block_fn = self.stack_block
+            residual_block = stack_block_fn(self.init_pool, self.filters[0] ,'residual_blcok_1',self.blocks_list[0], False)
+            for i in range(1, len(self.blocks_list)):
+                residual_block = stack_block_fn(residual_block, self.filters[i] ,'residual_block_'+str(i+1),self.blocks_list[i], True)
 
         axes = [2,3] if self.data_format=='channels_last' else [1,2]
 
