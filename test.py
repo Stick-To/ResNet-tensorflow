@@ -15,6 +15,6 @@ init_pool_param = {
     'pool_size':3,
     'strides':2
 }
-#init_conv——init_pool——[64 64 64,128 128 128,256 256 256]——averge_pool——dense_layer
+#init_conv—init_pool—[64 64 64,128 128 128,256 256 256]—averge_pool——dense_layer--->[3,4,3]
 testnet = net.ResNet(trainset,valset,0.01,1e-4,400,init_conv_param,init_pool_param,[3,4,3],'channels_last',False)
 testnet.train_all_epochs()
