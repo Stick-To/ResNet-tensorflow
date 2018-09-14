@@ -7,7 +7,8 @@ import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 #ResNet-v2
 class ResNet:
-    def __init__(self,dataprovider_train,dataprovider_test,init_learning_rate,epochs,init_conv_param,init_pool_param,blocks_list,data_format,is_bottleneck):
+    def __init__(self,dataprovider_train,dataprovider_test,init_learning_rate,l2_regularization_weight,epochs,
+                 init_conv_param,init_pool_param,blocks_list,data_format,is_bottleneck):
 
         """
             dataprovider_train:class dataprovider,trainset inside
@@ -46,8 +47,7 @@ class ResNet:
 
 
         self.learning_rate = init_learning_rate
-
-
+        self.l2_regularization_loss = l2_regularization_weight
         self.epochs = epochs
         self.init_conv_param = init_conv_param
         self.init_pool_param = init_pool_param
@@ -56,7 +56,6 @@ class ResNet:
         self.is_training = True
         self.is_bottleneck = is_bottleneck
         self.filters = [self.init_conv_param['filters']*(2**i) for i in range(len(blocks_list))]
-
         self.global_step = tf.get_variable(name='global_step',initializer=tf.constant(0,dtype=tf.int32),
                                            trainable=False)
 
@@ -68,7 +67,7 @@ class ResNet:
         shape.extend(self.data_shape)
         self.images = tf.placeholder(dtype=tf.float32,shape=shape,name='images')
         self.labels = tf.placeholder(dtype=tf.int32,shape=[None,self.num_classes],name='labels')
-    def conv_layer(self, bottom, kernel_size, filters, strides=1, name=''):
+    def conv_layer(self, bottom, kernel_size, filters, strides=1, name='conv'):
         #pad = kernel_size // 2
         #if self.data_format == 'channels_last':
         #    bottom_pad = tf.pad(bottom, [[0,0],[pad,pad],[pad,pad],[0,0]])
@@ -92,9 +91,9 @@ class ResNet:
     def project_shortcut(self, bottom, filters, is_shutcut_pooling=True):
         strides = 2 if is_shutcut_pooling else 1
         return self.conv_layer(bottom, 1, filters, strides, name="project")
-    def _build_block(self, bottom, filters, scope, use_project_shortcut=False):
+    def _build_block(self, bottom, filters, scope, is_project_shortcut=False):
         with tf.variable_scope(scope):
-            if(use_project_shortcut==True):
+            if is_project_shortcut:
                 shortcut = self.project_shortcut(bottom,filters)
                 strides = 2
             else:
@@ -109,8 +108,10 @@ class ResNet:
             return shortcut + conv
     def _build_bottleneck(self,bottom,filters,scope,is_project_shutcut=True,is_shutcut_pooling=False):
         with tf.variable_scope(scope):
-            output_filters=filters*4 if is_project_shutcut else filters
-            shortcut = self.project_shortcut(bottom,output_filters,is_shutcut_pooling)
+            if is_project_shutcut:
+                shortcut = self.project_shortcut(bottom,filters*4,is_shutcut_pooling)
+            else:
+                shortcut = bottom
             strides = 2 if is_shutcut_pooling else 1
             batch_norm = self.batch_norm(bottom)
             relu = tf.nn.relu(batch_norm)
@@ -120,17 +121,20 @@ class ResNet:
             conv = self.conv_layer(relu,3,filters,strides=strides,name='conv_2')
             batch_norm = self.batch_norm(conv)
             relu = tf.nn.relu(batch_norm)
-            conv = self.conv_layer(relu,1,output_filters,name='conv_3')
+            conv = self.conv_layer(relu,1,filters*4,name='conv_3')
             return conv+shortcut
     def stack_block(self, bottom, filters, scope,  num_blocks, use_project_shortcut):
         input = bottom
         input = self._build_block(input, filters, scope+str(1), use_project_shortcut)
+
+
         for i in range(1, num_blocks):
             input = self._build_block(input, filters, scope+str(i+1), False)
         return input
     def stack_bottleneck(self, bottom, filters, scope, num_blocks,is_shutcut_pooling=True):
         input = bottom
         input = self._build_bottleneck(input, filters, scope+str(1),True,is_shutcut_pooling)
+
         for i in range(1, num_blocks):
             input = self._build_bottleneck(input, filters, scope+str(i+1),False, False)
         return input
@@ -164,10 +168,13 @@ class ResNet:
                                                  name='final_average_pool'
             )
             self.final_dense =tf.layers.dense(self.final_average_pool,
-                                          self.num_classes)
+                                              self.num_classes)
         with tf.variable_scope('result'):
             self.logits = tf.nn.softmax(self.final_dense)
-            self.loss = tf.losses.softmax_cross_entropy(self.labels,self.logits,reduction=tf.losses.Reduction.MEAN)
+            self.softmax_loss = tf.losses.softmax_cross_entropy(self.labels,self.logits,reduction=tf.losses.Reduction.MEAN)
+            self.l2_loss = self.l2_regularization_loss * tf.add_n(
+                        [tf.nn.l2_loss(var) for var in tf.trainable_variables()])
+            self.loss = self.softmax_loss + self.l2_loss
             self.pred = tf.argmax(self.logits, 1)
             self.accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.labels,1),self.pred)
                                                    ,dtype=tf.float32))
