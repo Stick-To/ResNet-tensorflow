@@ -15,6 +15,7 @@ class ResNet:
             dataprovider_test:class dataprovier, if not None test it every epoch during train process
                                         and  default be used  in test() function
             init_learning_rate:the learning_rate when train process start
+            l2_regularization_weight:weight_delay for l2_loss
             epochs:epochs
             init_conv_param:dict, the parameters of init_conv  inside
             init_pool_param:dict, the parameters of init_pool  inside
