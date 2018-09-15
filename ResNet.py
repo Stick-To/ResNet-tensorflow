@@ -172,7 +172,7 @@ class ResNet:
                                               self.num_classes)
         with tf.variable_scope('result'):
             self.logits = tf.nn.softmax(self.final_dense)
-            self.softmax_loss = tf.losses.softmax_cross_entropy(self.labels,self.logits,reduction=tf.losses.Reduction.MEAN)
+            self.softmax_loss = tf.losses.softmax_cross_entropy(self.labels,self.final_dense,reduction=tf.losses.Reduction.MEAN)
             self.l2_loss = self.l2_regularization_loss * tf.add_n(
                         [tf.nn.l2_loss(var) for var in tf.trainable_variables()])
             self.loss = self.softmax_loss + self.l2_loss
