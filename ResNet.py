@@ -187,6 +187,7 @@ class ResNet:
         self.sess = tf.InteractiveSession()
         self.sess.run(tf.global_variables_initializer())
     def train_one_epoch(self):
+        self.is_training = True
         total_loss = []
         total_acc = []
         self.sess.run(self.train_initop)
@@ -204,6 +205,7 @@ class ResNet:
         return mean_loss, mean_acc
 
     def test(self):
+        self.is_training = False
         total_loss = []
         total_acc = []
         self.sess.run(self.test_initop)
