@@ -52,9 +52,13 @@ init_pool_param = {
 lr = 0.001
 l2_rate = 1e-4
 drop_prob = 0.3
+reduce_lr_epoch = [15]
 testnet = net.ResNet((32,32,3),10,init_conv_param,init_pool_param,[3,4,6,3],'channels_last',True)
 for epoch in range(epochs):
     print('-'*50,'epoch',epoch,'-'*50)
+    if(epoch in reduce_lr_epoch):
+        lr /= 10
+        print('learning rate reduced to',lr)
     train_acc = []
     train_loss = []
     val_acc = []
@@ -71,7 +75,7 @@ for epoch in range(epochs):
     print('>> train mean loss',train_mean_loss,' train mean acc:',train_mean_acc)
     for iter in range(num_test//batch_size):
         images, labels = test_datagen.next()
-        loss, acc = testnet.train_one_epoch(images, labels, lr, l2_rate, drop_prob)
+        loss, acc = testnet.validate_one_epoch(images, labels, l2_rate, drop_prob)
         sys.stdout.write('\r>> test iter '+str(iter)+' loss '+str(loss)+' acc '+str(acc))
         train_acc.append(acc)
         train_loss.append(loss)
