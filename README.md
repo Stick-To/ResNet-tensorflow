@@ -9,8 +9,7 @@ Tensorflow 1.x
 
 python 3.x
 
-# TFRecord
-see convert_to_tfrecord.py
+# Test 
+resnet50 with bottleneck, test accuracy 96.68%
 
-# dataprovider
-see dataprovider.py
+
