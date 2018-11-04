@@ -10,6 +10,6 @@ Tensorflow 1.x
 python 3.x
 
 # Test 
-resnet50 with bottleneck, test accuracy 96.68%
+resnet50 with bottleneck, test accuracy 92+%
 
 
