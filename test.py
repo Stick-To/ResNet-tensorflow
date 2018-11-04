@@ -79,7 +79,7 @@ for epoch in range(epochs):
         sys.stdout.write('\r>> test iter '+str(iter)+' loss '+str(loss)+' acc '+str(acc))
         val_acc.append(acc)
         val_loss.append(loss)
-    vsl_mean_loss = np.mean(val_loss)
+    val_mean_loss = np.mean(val_loss)
     val_mean_acc = np.mean(val_acc)
     sys.stdout.write('\n')
     print('>> test mean loss',val_mean_loss,' test mean acc:',val_mean_acc)
