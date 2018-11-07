@@ -21,7 +21,8 @@ data_shape = (32,32,3)
 num_train = 50000
 num_test = 10000
 num_classes = 10
-batch_size = 32
+train_batch_size = 128
+test_batch_size = 200
 epochs = 200
 
 (x_train, y_train),(x_test, y_test) = cifar10.load_data()
@@ -34,8 +35,8 @@ train_datagen = ImageDataGenerator(
     shear_range=0.1,
     zoom_range=0.1,
     rotation_range=30.
-).flow(x_train, y_train, batch_size=batch_size)
-test_datagen = ImageDataGenerator().flow(x_test, y_test, batch_size=batch_size)
+).flow(x_train, y_train, batch_size=train_batch_size)
+test_datagen = ImageDataGenerator().flow(x_test, y_test, batch_size=test_batch_size)
 
 
 init_conv_param = {
@@ -62,7 +63,7 @@ for epoch in range(epochs):
     train_loss = []
     val_acc = []
     val_loss = []
-    for iter in range(num_train//batch_size):
+    for iter in range(num_train//train_batch_size):
         images, labels = train_datagen.next()
         train_x = images - mean
         loss, acc = testnet.train_one_epoch(train_x, labels, lr, l2_rate, drop_prob)
@@ -73,7 +74,7 @@ for epoch in range(epochs):
     train_mean_acc = np.mean(train_acc)
     sys.stdout.write('\n')
     print('>> train mean loss',train_mean_loss,' train mean acc:',train_mean_acc)
-    for iter in range(num_test//batch_size):
+    for iter in range(num_test//test_batch_size):
         images, labels = test_datagen.next()
         test_x = images - mean
         loss, acc = testnet.validate_one_epoch(test_x, labels, l2_rate, drop_prob)
