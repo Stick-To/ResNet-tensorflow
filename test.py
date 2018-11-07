@@ -61,8 +61,8 @@ for epoch in range(epochs):
         print('learning rate reduced to',lr)
     train_acc = []
     train_loss = []
-    val_acc = []
-    val_loss = []
+    test_acc = []
+    test_loss = []
     for iter in range(num_train//train_batch_size):
         images, labels = train_datagen.next()
         train_x = images - mean
@@ -79,10 +79,10 @@ for epoch in range(epochs):
         test_x = images - mean
         loss, acc = testnet.validate_one_epoch(test_x, labels, l2_rate, drop_prob)
         sys.stdout.write('\r>> test iter '+str(iter)+' loss '+str(loss)+' acc '+str(acc))
-        val_acc.append(acc)
-        val_loss.append(loss)
-    val_mean_loss = np.mean(val_loss)
-    val_mean_acc = np.mean(val_acc)
+        test_acc.append(acc)
+        test_loss.append(loss)
+    test_mean_loss = np.mean(test_loss)
+    test_mean_acc = np.mean(test_acc)
     sys.stdout.write('\n')
-    print('>> test mean loss',val_mean_loss,' test mean acc:',val_mean_acc)
+    print('>> test mean loss',test_mean_loss,' test mean acc:',test_mean_acc)
 
