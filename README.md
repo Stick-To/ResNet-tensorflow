@@ -9,6 +9,6 @@ Any number of layers network  could be initialized by python list
 python3.6 tensorflow1.11
 
 # Test 
-resnet50 with bottleneck, test accuracy 92+%
+resnet50 with bottleneck, test accuracy 92.35%
 
 
