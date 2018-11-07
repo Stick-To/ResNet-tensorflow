@@ -4,10 +4,9 @@ The residual block use the proposed mode in https://arxiv.org/abs/1603.05027  wh
 # Modular
 Any number of layers network  could be initialized by python list
 
-# Requirements
-Tensorflow 1.x
+# Experimental Environment
 
-python 3.x
+python3.6 tensorflow1.11
 
 # Test 
 resnet50 with bottleneck, test accuracy 92+%
