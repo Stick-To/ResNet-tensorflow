@@ -1,4 +1,3 @@
-
 import tensorflow as tf
 import keras
 from keras.datasets import cifar10
@@ -17,7 +16,7 @@ if device_name is not '':
 else:
     print('Found GPU Device Failed!')
 
-
+mean = np.array([123.68, 116.779, 103.979]).reshape((1, 1, 1, 3))
 data_shape = (32,32,3)
 num_train = 50000
 num_test = 10000
@@ -65,7 +64,8 @@ for epoch in range(epochs):
     val_loss = []
     for iter in range(num_train//batch_size):
         images, labels = train_datagen.next()
-        loss, acc = testnet.train_one_epoch(images, labels, lr, l2_rate, drop_prob)
+        train_x = images - mean
+        loss, acc = testnet.train_one_epoch(train_x, labels, lr, l2_rate, drop_prob)
         sys.stdout.write('\r>> train iter '+str(iter)+' loss '+str(loss)+' acc '+str(acc))
         train_acc.append(acc)
         train_loss.append(loss)
@@ -75,7 +75,8 @@ for epoch in range(epochs):
     print('>> train mean loss',train_mean_loss,' train mean acc:',train_mean_acc)
     for iter in range(num_test//batch_size):
         images, labels = test_datagen.next()
-        loss, acc = testnet.validate_one_epoch(images, labels, l2_rate, drop_prob)
+        test_x = images - mean
+        loss, acc = testnet.validate_one_epoch(test_x, labels, l2_rate, drop_prob)
         sys.stdout.write('\r>> test iter '+str(iter)+' loss '+str(loss)+' acc '+str(acc))
         val_acc.append(acc)
         val_loss.append(loss)
