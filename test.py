@@ -2,13 +2,12 @@ import tensorflow as tf
 import keras
 from keras.datasets import cifar10
 from keras.datasets import cifar100
-from keras.preprocessing.image import ImageDataGenerator
+import ResNetv2 as net
 import numpy as np
-import os
 import sys
-os.environ['TF_CPP_MIN_LOG_LEVEL'] ='2'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-import ResNet as net
+from keras.preprocessing.image import ImageDataGenerator
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 device_name = tf.test.gpu_device_name()
 if device_name is not '':
@@ -16,73 +15,83 @@ if device_name is not '':
 else:
     print('Found GPU Device Failed!')
 
+config = {
+    'is_bottleneck': False,
+    'residual_block_list': [3, 4, 6, 3],
+    'init_conv_filters': 16,
+    'init_conv_kernel_size': 3,
+    'init_conv_strides': 1,
+    'init_pooling_pool_size': 3,
+    'init_pooling_strides': 2,
+}
+
 mean = np.array([123.68, 116.779, 103.979]).reshape((1, 1, 1, 3))
-data_shape = (32,32,3)
+data_shape = (32, 32, 3)
 num_train = 50000
 num_test = 10000
 num_classes = 10
 train_batch_size = 128
 test_batch_size = 200
 epochs = 200
+weight_decay = 1e-4
+lr = 0.01
 
 (x_train, y_train),(x_test, y_test) = cifar10.load_data()
 y_train = keras.utils.to_categorical(y_train, num_classes)
 y_test = keras.utils.to_categorical(y_test, num_classes)
-train_datagen = ImageDataGenerator(
+train_gen = ImageDataGenerator(
     horizontal_flip=True,
     width_shift_range=0.1,
     height_shift_range=0.1,
     shear_range=0.1,
     zoom_range=0.1,
-    rotation_range=30.
 ).flow(x_train, y_train, batch_size=train_batch_size)
-test_datagen = ImageDataGenerator().flow(x_test, y_test, batch_size=test_batch_size)
+test_gen = ImageDataGenerator().flow(x_test, y_test, batch_size=test_batch_size)
 
-
-init_conv_param = {
-    'kernel_size':7,
-    'filters':64,
-    'strides':2
-}
-init_pool_param = {
-    'pooling_size':3,
-    'strides':2
-}
-
-lr = 0.001
-l2_rate = 1e-4
-drop_prob = 0.3
-reduce_lr_epoch = [15]
-testnet = net.ResNet((32,32,3),10,init_conv_param,init_pool_param,[3,4,6,3],'channels_last',True)
+reduce_lr_epoch = [25, 125]
+testnet = net.Resnetv2(config, data_shape, num_classes, weight_decay, 'channels_last')
 for epoch in range(epochs):
-    print('-'*50,'epoch',epoch,'-'*50)
-    if(epoch in reduce_lr_epoch):
-        lr /= 10
-        print('learning rate reduced to',lr)
+    print('-'*20, 'epoch', epoch, '-'*20)
     train_acc = []
     train_loss = []
     test_acc = []
-    test_loss = []
+    # reduce learning rate
+    if epoch == 1:
+        lr = 0.1
+        print('warm up  learning rate =', lr, 'now')
+    if epoch in reduce_lr_epoch:
+        lr = lr * 0.1
+        print('reduce learning rate =', lr, 'now')
+    # train one epoch
     for iter in range(num_train//train_batch_size):
-        images, labels = train_datagen.next()
-        train_x = images - mean
-        loss, acc = testnet.train_one_epoch(train_x, labels, lr, l2_rate, drop_prob)
-        sys.stdout.write('\r>> train iter '+str(iter)+' loss '+str(loss)+' acc '+str(acc))
+        # get and preprocess image
+        images, labels = train_gen.next()
+        images = images - mean
+        # train_one_batch also can accept your own session
+        loss, acc = testnet.train_one_batch(images, labels, lr)
         train_acc.append(acc)
         train_loss.append(loss)
-    train_mean_loss = np.mean(train_loss)
-    train_mean_acc = np.mean(train_acc)
-    sys.stdout.write('\n')
-    print('>> train mean loss',train_mean_loss,' train mean acc:',train_mean_acc)
+        sys.stdout.write("\r>> train "+str(iter+1)+'/'+str(num_train//train_batch_size)+' loss '+str(loss)+' acc '+str(acc))
+    mean_train_loss = np.mean(train_loss)
+    mean_train_acc = np.mean(train_acc)
+    sys.stdout.write("\n")
+    print('>> epoch', epoch, 'train mean loss', mean_train_acc, 'train mean acc', mean_train_acc)
+
+    # validate one epoch
     for iter in range(num_test//test_batch_size):
-        images, labels = test_datagen.next()
-        test_x = images - mean
-        loss, acc = testnet.validate_one_epoch(test_x, labels, l2_rate, drop_prob)
-        sys.stdout.write('\r>> test iter '+str(iter)+' loss '+str(loss)+' acc '+str(acc))
+        # get and preprocess image
+        images, labels = test_gen.next()
+        images = images - mean
+        # validate_one_batch also can accept your own session
+        logit, acc = testnet.validate_one_batch(images, labels)
         test_acc.append(acc)
-        test_loss.append(loss)
-    test_mean_loss = np.mean(test_loss)
-    test_mean_acc = np.mean(test_acc)
-    sys.stdout.write('\n')
-    print('>> test mean loss',test_mean_loss,' test mean acc:',test_mean_acc)
+        sys.stdout.write("\r>> test "+str(iter+1)+'/'+str(num_test//test_batch_size)+' acc '+str(acc))
+    mean_val_acc = np.mean(test_acc)
+    sys.stdout.write("\n")
+    print('>> epoch', epoch, ' test mean acc', mean_val_acc)
+
+    # logit = testnet.test(images)
+    # testnet.save_weight(self, mode, path, sess=None)
+    # testnet.load_weight(self, mode, path, sess=None)
+
 
