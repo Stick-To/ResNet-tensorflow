@@ -216,7 +216,7 @@ class Resnetv2:
     def _residual_bottleneck(self, bottom, filters, strides, scope):
         with tf.variable_scope(scope):
             with tf.variable_scope('conv_branch'):
-                conv = self._bn_activation_conv(bottom, filters, 1, 1, 'conv3')
+                conv = self._bn_activation_conv(bottom, filters, 1, 1, 'conv1')
                 conv = self._bn_activation_conv(conv, filters, 3, strides, 'conv2')
                 conv = self._bn_activation_conv(conv, filters*4, 1, 1, 'conv3')
             with tf.variable_scope('identity_branch'):
