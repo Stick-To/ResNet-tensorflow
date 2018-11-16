@@ -1,14 +1,22 @@
-# Resnet-v2 in Tensorflow
-The residual block use the proposed mode in https://arxiv.org/abs/1603.05027  which is known as resnet-v2
+# ResNet
 
-# Modular
-Any number of layers network  could be initialized by python list
+# ResNetv2
+https://arxiv.org/abs/1603.05027  
+
+# Stochastic Depth
+https://arxiv.org/abs/1603.09382
+
+# Wide Residual Networks
+https://arxiv.org/abs/1605.07146
+
+# Weighted Residuals Networks
+https://arxiv.org/abs/1605.08831
+
+# Pyramidal Residual Networks
+https://arxiv.org/abs/1610.02915
+
+# Dual Path Networks
+https://arxiv.org/abs/1707.01629
 
 # Experimental Environment
-
 python3.6 tensorflow1.11
-
-# Test 
-resnet50 with bottleneck, test accuracy 92.35%
-
-
