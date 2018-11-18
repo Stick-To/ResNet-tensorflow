@@ -16,7 +16,7 @@ else:
     print('Found GPU Device Failed!')
 
 config = {
-    'is_bottleneck': False,
+    'is_bottleneck': True,
     'residual_block_list': [3, 4, 6, 3],
     'init_conv_filters': 16,
     'init_conv_kernel_size': 3,
