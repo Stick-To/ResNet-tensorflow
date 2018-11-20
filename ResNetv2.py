@@ -43,14 +43,12 @@ class Resnetv2:
                 filters=self.config['init_conv_filters'],
                 kernel_size=self.config['init_conv_kernel_size'],
                 strides=self.config['init_conv_strides'],
-                padding='same',
                 scope='conv1_1',
                 )
             pool1 = self._max_pooling(
                 bottom=conv1_1,
                 pool_size = self.config['init_pooling_pool_size'],
                 strides=self.config['init_pooling_strides'],
-                padding='same',
                 name='pool1'
             )
         if self.is_bottleneck:
@@ -160,14 +158,14 @@ class Resnetv2:
         else:
             raise FileNotFoundError('Not Found Model File!')
 
-    def _conv_bn_activation(self, bottom, filters, kernel_size, strides, padding, scope, activation=tf.nn.relu):
+    def _conv_bn_activation(self, bottom, filters, kernel_size, strides, scope, activation=tf.nn.relu):
         with tf.variable_scope(scope):
             conv = tf.layers.conv2d(
                 inputs=bottom,
                 filters=filters,
                 kernel_size=kernel_size,
                 strides=strides,
-                padding=padding,
+                padding='same',
                 data_format=self.data_format,
                 kernel_initializer=tf.contrib.layers.variance_scaling_initializer()
             )
@@ -223,24 +221,22 @@ class Resnetv2:
                 shutcut = self._bn_activation_conv(bottom, filters*4, 3, strides, 'shutcut_conv')
             return conv + shutcut
 
-    def _max_pooling(self, bottom, pool_size, strides, padding, name):
-        assert(padding in ['same', 'valid'])
+    def _max_pooling(self, bottom, pool_size, strides, name):
         return tf.layers.max_pooling2d(
             inputs=bottom,
             pool_size=pool_size,
             strides=strides,
-            padding=padding,
+            padding='same',
             data_format=self.data_format,
             name=name
         )
 
-    def _avg_pooling(self, bottom, pool_size, strides, padding, name):
-        assert(padding in ['same', 'valid'])
+    def _avg_pooling(self, bottom, pool_size, strides, name):
         return tf.layers.average_pooling2d(
             inputs=bottom,
             pool_size=pool_size,
             strides=strides,
-            padding=padding,
+            padding='same',
             data_format=self.data_format,
             name=name
         )
