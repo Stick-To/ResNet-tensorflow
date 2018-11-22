@@ -43,7 +43,6 @@ class Resnetv2:
                 filters=self.config['init_conv_filters'],
                 kernel_size=self.config['init_conv_kernel_size'],
                 strides=self.config['init_conv_strides'],
-                scope='conv1_1',
                 )
             pool1 = self._max_pooling(
                 bottom=conv1_1,
@@ -158,55 +157,53 @@ class Resnetv2:
         else:
             raise FileNotFoundError('Not Found Model File!')
 
-    def _conv_bn_activation(self, bottom, filters, kernel_size, strides, scope, activation=tf.nn.relu):
-        with tf.variable_scope(scope):
-            conv = tf.layers.conv2d(
-                inputs=bottom,
-                filters=filters,
-                kernel_size=kernel_size,
-                strides=strides,
-                padding='same',
-                data_format=self.data_format,
-                kernel_initializer=tf.contrib.layers.variance_scaling_initializer()
-            )
-            bn = tf.layers.batch_normalization(
-                inputs=conv,
-                axis=3 if self.data_format == 'channels_last' else 1,
-                training=self.is_training
-            )
-            if activation is not None:
-                return activation(bn)
-            else:
-                return bn
+    def _conv_bn_activation(self, bottom, filters, kernel_size, strides, activation=tf.nn.relu):
+        conv = tf.layers.conv2d(
+            inputs=bottom,
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding='same',
+            data_format=self.data_format,
+            kernel_initializer=tf.contrib.layers.variance_scaling_initializer()
+        )
+        bn = tf.layers.batch_normalization(
+            inputs=conv,
+            axis=3 if self.data_format == 'channels_last' else 1,
+            training=self.is_training
+        )
+        if activation is not None:
+            return activation(bn)
+        else:
+            return bn
 
-    def _bn_activation_conv(self, bottom, filters, kernel_size, strides, scope, activation=tf.nn.relu):
-        with tf.variable_scope(scope):
-            bn = tf.layers.batch_normalization(
-                inputs=bottom,
-                axis=3 if self.data_format == 'channels_last' else 1,
-                training=self.is_training
-            )
-            if activation is not None:
-                bn = activation(bn)
-            conv = tf.layers.conv2d(
-                inputs=bn,
-                filters=filters,
-                kernel_size=kernel_size,
-                strides=strides,
-                padding='same',
-                data_format=self.data_format,
-                kernel_initializer=tf.contrib.layers.variance_scaling_initializer()
-            )
-            return conv
+    def _bn_activation_conv(self, bottom, filters, kernel_size, strides, activation=tf.nn.relu):
+        bn = tf.layers.batch_normalization(
+            inputs=bottom,
+            axis=3 if self.data_format == 'channels_last' else 1,
+            training=self.is_training
+        )
+        if activation is not None:
+            bn = activation(bn)
+        conv = tf.layers.conv2d(
+            inputs=bn,
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding='same',
+            data_format=self.data_format,
+            kernel_initializer=tf.contrib.layers.variance_scaling_initializer()
+        )
+        return conv
 
     def _residual_block(self, bottom, filters, strides, scope):
         with tf.variable_scope(scope):
             with tf.variable_scope('conv_branch'):
-                conv = self._bn_activation_conv(bottom, filters, 3, strides, 'conv1')
-                conv = self._bn_activation_conv(conv, filters, 3, 1, 'conv2')
+                conv = self._bn_activation_conv(bottom, filters, 3, strides)
+                conv = self._bn_activation_conv(conv, filters, 3, 1)
             with tf.variable_scope('identity_branch'):
                 if strides != 1:
-                    shutcut = self._bn_activation_conv(bottom, filters, 3, strides, 'shutcut_conv')
+                    shutcut = self._bn_activation_conv(bottom, filters, 3, strides)
                 else:
                     shutcut = bottom
             return conv + shutcut
@@ -214,11 +211,11 @@ class Resnetv2:
     def _residual_bottleneck(self, bottom, filters, strides, scope):
         with tf.variable_scope(scope):
             with tf.variable_scope('conv_branch'):
-                conv = self._bn_activation_conv(bottom, filters, 1, 1, 'conv1')
-                conv = self._bn_activation_conv(conv, filters, 3, strides, 'conv2')
-                conv = self._bn_activation_conv(conv, filters*4, 1, 1, 'conv3')
+                conv = self._bn_activation_conv(bottom, filters, 1, 1)
+                conv = self._bn_activation_conv(conv, filters, 3, strides)
+                conv = self._bn_activation_conv(conv, filters*4, 1, 1)
             with tf.variable_scope('identity_branch'):
-                shutcut = self._bn_activation_conv(bottom, filters*4, 3, strides, 'shutcut_conv')
+                shutcut = self._bn_activation_conv(bottom, filters*4, 3, strides)
             return conv + shutcut
 
     def _max_pooling(self, bottom, pool_size, strides, name):
