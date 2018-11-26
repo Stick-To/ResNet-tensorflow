@@ -1,5 +1,5 @@
 # ResNet
-
+have 'SENet' mode
 # ResNetv2
 https://arxiv.org/abs/1603.05027  
 
