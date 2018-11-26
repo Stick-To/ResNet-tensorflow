@@ -4,7 +4,6 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 import os
-os.environ['TF_CPP_MIN_LEVEL'] = '2'
 
 
 class Resnetv2:
@@ -62,10 +61,12 @@ class Resnetv2:
                 residual_block = stack_residual_unit_fn(residual_block, self.filters_list[i], 2, 'block'+str(i+1)+'_unit'+str(1))
                 for j in range(1, self.block_list[i]):
                     residual_block = stack_residual_unit_fn(residual_block, self.filters_list[i], 1, 'block'+str(i+1)+'_unit'+str(j+1))
-            residual_block = tf.nn.relu(residual_block)
+        with tf.variable_scope('after_spliting'):
+            bn = self._bn(residual_block)
+            relu = tf.nn.relu(bn)
         with tf.variable_scope('final_dense'):
             axes = [1, 2] if self.data_format == 'channels_last' else [2, 3]
-            global_pool = tf.reduce_mean(residual_block, axis=axes, keepdims=False, name='global_pool')
+            global_pool = tf.reduce_mean(relu, axis=axes, keepdims=False, name='global_pool')
             final_dense = tf.layers.dense(global_pool, self.num_classes, name='final_dense')
         with tf.variable_scope('optimizer'):
             self.logit = tf.nn.softmax(final_dense, name='logit')
@@ -157,6 +158,14 @@ class Resnetv2:
         else:
             raise FileNotFoundError('Not Found Model File!')
 
+    def _bn(self, bottom):
+        bn = tf.layers.batch_normalization(
+            inputs=bottom,
+            axis=3 if self.data_format == 'channels_last' else 1,
+            training=self.is_training
+        )
+        return bn
+
     def _conv_bn_activation(self, bottom, filters, kernel_size, strides, activation=tf.nn.relu):
         conv = tf.layers.conv2d(
             inputs=bottom,
@@ -167,22 +176,14 @@ class Resnetv2:
             data_format=self.data_format,
             kernel_initializer=tf.contrib.layers.variance_scaling_initializer()
         )
-        bn = tf.layers.batch_normalization(
-            inputs=conv,
-            axis=3 if self.data_format == 'channels_last' else 1,
-            training=self.is_training
-        )
+        bn = self._bn(conv)
         if activation is not None:
             return activation(bn)
         else:
             return bn
 
     def _bn_activation_conv(self, bottom, filters, kernel_size, strides, activation=tf.nn.relu):
-        bn = tf.layers.batch_normalization(
-            inputs=bottom,
-            axis=3 if self.data_format == 'channels_last' else 1,
-            training=self.is_training
-        )
+        bn = self._bn(bottom)
         if activation is not None:
             bn = activation(bn)
         conv = tf.layers.conv2d(

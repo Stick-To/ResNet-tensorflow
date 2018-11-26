@@ -18,7 +18,7 @@ else:
 config = {
     'is_bottleneck': True,
     'residual_block_list': [3, 4, 6, 3],
-    'init_conv_filters': 64,
+    'init_conv_filters': 16,
     'init_conv_kernel_size': 3,
     'init_conv_strides': 1,
     'init_pooling_pool_size': 3,
