@@ -23,6 +23,8 @@ config = {
     'init_conv_strides': 1,
     'init_pooling_pool_size': 3,
     'init_pooling_strides': 2,
+    'is_SENet': True,
+    'reduction': 16
 }
 
 mean = np.array([123.68, 116.779, 103.979]).reshape((1, 1, 1, 3))
