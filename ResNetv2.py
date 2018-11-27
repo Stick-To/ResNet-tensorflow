@@ -211,7 +211,7 @@ class Resnetv2:
                 else:
                     shutcut = bottom
             if self.is_SENet:
-                return self.squeeze_and_excitation(conv + shutcut)
+                return self.squeeze_and_excitation(conv) + shutcut
             else:
                 return conv + shutcut
 
@@ -224,7 +224,7 @@ class Resnetv2:
             with tf.variable_scope('identity_branch'):
                 shutcut = self._bn_activation_conv(bottom, filters*4, 3, strides)
             if self.is_SENet:
-                return self.squeeze_and_excitation(conv + shutcut)
+                return self.squeeze_and_excitation(conv) + shutcut
             else:
                 return conv + shutcut
 
